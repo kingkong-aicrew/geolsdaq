@@ -1,0 +1,42 @@
+name: compute-breadth (daily up/down breadth)
+
+on:
+  schedule:
+    # KST 18:00 = UTC 09:00 (월~금) — fetch-index(17:30) 이후, 종가 확정 후.
+    # index_prices(지수 등락률)가 먼저 적재돼야 illusion_gap 계산 가능.
+    - cron: "0 9 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "최근 N일 백필"
+        required: false
+        default: "1"
+
+jobs:
+  compute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: geolsdaq
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: geolsdaq/backend/requirements.txt
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Run compute_breadth
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: python -m backend.batch.compute_breadth --days ${{ github.event.inputs.days || '1' }}

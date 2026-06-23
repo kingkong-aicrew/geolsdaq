@@ -1,0 +1,9 @@
+# 껄스닥 백엔드 — 웹서비스(Render) 전용 의존성 (가벼운 빌드)
+# 배치(pykrx/pandas/setuptools<81 핀)는 EOD cron(GitHub Actions)에서만 필요 →
+# 거기서만 전체 requirements.txt 설치. 웹서버는 아래만으로 충분.
+fastapi==0.115.5
+uvicorn[standard]==0.32.0
+pydantic==2.9.2
+httpx==0.27.2
+slowapi==0.1.9
+python-dotenv==1.0.1
