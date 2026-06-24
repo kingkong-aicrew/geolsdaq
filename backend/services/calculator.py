@@ -1,17 +1,17 @@
-"""이번 달 수익 계산.
+"""'그때 샀다면 지금' 보유 수익 계산.
 
 scope:
-- period_start (KST 당월 1일) 직전 거래일 종가 = price_start
-- period_end (KST 어제) 종가 = price_end
-- 두 종가 차이 × 수량 = profit_amount_krw
-- ((end - start) / start) * 100 = profit_pct (종목 자체 수익률)
+- buy_date 종가 = price_start (그때 산 가격. 휴장일이면 직전 거래일)
+- 최신 거래일 종가 = price_end (지금 가격)
+- (price_end - price_start) × 수량 = profit_amount_krw
+- ((end - start) / start) × 100 = profit_pct (보유 수익률)
 
 가드:
-- buy_date 가 period_start 이후면 → price_start = buy_date 종가로 대체
-  (당월 중도 매수자도 자기 매수 시점부터의 이번 달 수익을 본다)
+- buy_date 가 상장 전 등으로 데이터 없음 → 503 (정직하게 "그 시점 데이터 없음")
 - 휴장일이면 그 이전 가장 가까운 거래일 종가
 - 종목 없음 → 404
 - 가격 없음 → 503
+- period_end 는 항상 '실제 데이터가 있는 최신 거래일' = 라벨과 가격일 불일치 없음
 """
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from datetime import date
 from ..models.schemas import CalculateRequest, CalculateResponse
 from ..repositories.prices import PriceRepository, PriceRow
 from ..config import get_settings
-from .period import current_month_window
+from . import period
 
 
 class TickerNotFoundError(Exception):
@@ -53,18 +53,20 @@ class Calculator:
                 f"종목 '{req.ticker}'을(를) 찾을 수 없습니다."
             )
 
-        period_start, period_end = current_month_window()
+        # "그때(buy_date) 샀다면 지금(최신 거래일)" 보유 수익.
+        # price_start = buy_date(또는 직전 거래일) 종가, price_end = 최신 거래일 종가.
+        today = period.kst_today()
+        start_row = await self.prices.get_close_on_or_before(req.ticker, req.buy_date)
+        end_row = await self.prices.get_close_on_or_before(req.ticker, today)
 
-        # period_start 가격 (또는 buy_date 가격, 더 늦은 쪽)
-        price_start_ref = max(period_start, req.buy_date)
-        # 첫 시점 종가는 'price_start_ref 직전 거래일' 종가가 정의에 맞음.
-        # 단순화: price_start_ref 당일 또는 이전 가장 가까운 종가 사용.
-        start_row = await self.prices.get_close_on_or_before(req.ticker, price_start_ref)
-        end_row = await self.prices.get_close_on_or_before(req.ticker, period_end)
-
-        if not start_row or not end_row:
+        if not start_row:
+            # buy_date 이전 거래일 종가가 테이블에 없음 = 상장 전이거나 데이터 부족
             raise PriceUnavailableError(
-                f"가격 데이터가 부족합니다 (start={start_row}, end={end_row}). 배치 확인."
+                f"{req.buy_date} 시점 가격이 없습니다 (상장 전이거나 데이터 부족)."
+            )
+        if not end_row:
+            raise PriceUnavailableError(
+                "최신 가격 데이터가 없습니다. 배치 cron 확인 필요."
             )
 
         krw_start = await self._krw_close(start_row, start_row.date)
@@ -80,8 +82,10 @@ class Calculator:
             market=meta["market"],
             qty=req.qty,
             buy_date=req.buy_date,
-            period_start=period_start,
-            period_end=period_end,
+            # period_start = 실제 매수 반영일(buy_date 또는 직전 거래일)
+            # period_end = 실제 최신 거래일(지금) → 라벨과 가격일이 항상 일치
+            period_start=start_row.date,
+            period_end=end_row.date,
             price_period_start=round(krw_start, 2),
             price_period_end=round(krw_end, 2),
             profit_amount_krw=round(profit_amount, 2),

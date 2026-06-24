@@ -43,6 +43,19 @@ function fmtPct(p: number): string {
   return `${p.toFixed(2)}%`;
 }
 
+// buy_date → "N년 전" / "N개월 전" 라벨 (그때 샀다면 시점 표시)
+function agoLabel(buyDate: string): string {
+  const buy = new Date(buyDate);
+  const now = new Date();
+  let months =
+    (now.getFullYear() - buy.getFullYear()) * 12 +
+    (now.getMonth() - buy.getMonth());
+  if (months < 0) months = 0;
+  if (months >= 12) return `${Math.round(months / 12)}년 전`;
+  if (months >= 1) return `${months}개월 전`;
+  return "최근";
+}
+
 export function SlideResult({
   active,
   data,
@@ -157,13 +170,12 @@ export function SlideResult({
             +0<span className="won">원</span>
           </div>
           <div className="caption">
-            이번 달 <b>{data.name}</b>이(가){" "}
-            {gain ? "당신 대신 번 돈" : "당신에게 안긴 손실"}
+            {agoLabel(data.buy_date)} <b>{data.name}</b> 샀다면, 지금
           </div>
 
           <div className="life-compare">
             <div className="life-head">
-              {gain ? "이 돈, 환산하면" : "날아간 돈, 환산하면"}
+              {gain ? "놓친 수익, 환산하면" : "피한 손실, 환산하면"}
             </div>
             <ul className="life-list">
               <li>
@@ -187,8 +199,8 @@ export function SlideResult({
             </ul>
             <div className="life-note">
               {gain
-                ? "이만큼 벌어도, 마음이 놓이던가요?"
-                : "그때의 나를 탓해도, 이미 지난 일."}
+                ? "그때 샀어야 했는데… 이미 지난 기회."
+                : "안 사길, 천만다행이네요."}
             </div>
             <div className="life-src">
               기준: 국민연금공단·통계청 공식 통계 · 서울 전셋값은 공개 시세
@@ -231,7 +243,7 @@ export function SlideResult({
               : "천하제일 주식자랑대회 등재 →"}
           </button>
           <button className="parallel-btn" onClick={onParallel}>
-            5년 전에 샀더라면? 평행우주 보기
+            그때 다른 종목 샀다면? 평행우주
           </button>
         </>
       )}
