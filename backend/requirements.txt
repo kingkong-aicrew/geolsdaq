@@ -6,13 +6,17 @@ slowapi==0.1.9
 python-dotenv==1.0.1
 
 # 배치 (cron 환경에서만 필요)
-# KR 종목 EOD = pykrx (개별종목 기간조회만 사용 — KRX 직통, 안티봇 무관).
+# KR 종목 EOD = pykrx (개별종목 기간조회만 사용 — KRX 직통, 안티봇 무관). fetch_kr.py 가 사용.
+# 지수(코스피/코스닥) EOD = FinanceDataReader (KS11/KQ11). pykrx 지수 API 가 KRX
+#   포맷 변경으로 빈데이터 반환(2026-06) → fetch_index.py 는 FDR 로 전환.
+#   KOSPI/KOSDAQ 종목 분류용 StockListing('KRX') 도 FDR 로 조회(compute_breadth).
 # US 주식·환율 EOD = Twelve Data REST(httpx) — yfinance 안티봇 차단으로 2026-06 교체.
 # ⚠️ setuptools<81 고정: pykrx 1.0.45 가 pkg_resources(import) 에 의존하는데
 #    setuptools 81+ 는 pkg_resources 를 제거함 → ModuleNotFoundError. 최신 pip 가
 #    setuptools 82 를 깔면 cron(GitHub Actions)·로컬 모두 pykrx import 가 깨지므로 핀.
 setuptools<81
 pykrx==1.0.45
+finance-datareader==0.9.202
 pandas==2.2.3
 
 # 테스트

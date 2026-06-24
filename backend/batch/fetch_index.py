@@ -1,13 +1,12 @@
 """지수 시계열(코스피/코스닥) EOD 수집 → Supabase index_prices upsert.
 
-⚠️ 보류(2026-06-22): pykrx 1.0.45 의 지수 API(get_index_ohlcv_by_date)가
-   KRX 응답 포맷 변경으로 빈 데이터를 반환해 작동 불가(개별종목 OHLCV 는 정상).
-   지수착시(index_breadth)는 이 배치에 의존하므로 함께 보류 상태.
-   재개 옵션: (a) 정식 지수 소스(Twelve Data 등 키 API) 연결,
-   (b) DB 적재된 KR 종목으로 시총가중/삼전닉스 프록시 산출(설계 검토 완료).
+데이터소스: FinanceDataReader(FDR) — fdr.DataReader('KS11'|'KQ11', start, end).
+   pykrx 1.0.45 의 지수 API(get_index_ohlcv_by_date)가 KRX 응답 포맷 변경으로
+   빈 데이터를 반환해 작동 불가(2026-06) → FDR 로 전환. 개별종목 OHLCV(fetch_kr)
+   는 pykrx 가 정상이라 그대로 둔다.
 
 설계 A-4:
-- pykrx get_index_ohlcv_by_date(s, e, "1001"=코스피 / "2001"=코스닥) — 지수 1콜.
+- FDR DataReader('KS11'=코스피 / 'KQ11'=코스닥) — 지수 1콜로 종가 시계열.
 - 등락률(change_pct)은 종가 시계열에서 전 거래일 대비로 계산해 저장
   (조회 시 join 회피). 시리즈 첫 행은 직전 종가가 없으므로 None.
 
@@ -28,10 +27,11 @@ from typing import Dict, List, Optional, Tuple
 
 from ..repositories.supabase_client import SupabaseRest
 
-# 지수 코드 → (index_code, 표시명). pykrx: 코스피 1001, 코스닥 2001.
+# FDR 지수 심볼 → (index_code, 표시명). FDR: 코스피 'KS11', 코스닥 'KQ11'.
+# index_code 는 DB(index_prices.index_code CHECK) 와 동일하게 'KOSPI'/'KOSDAQ' 유지.
 INDEX_CODES: Dict[str, Tuple[str, str]] = {
-    "1001": ("KOSPI", "코스피"),
-    "2001": ("KOSDAQ", "코스닥"),
+    "KS11": ("KOSPI", "코스피"),
+    "KQ11": ("KOSDAQ", "코스닥"),
 }
 
 
@@ -66,23 +66,31 @@ def rows_from_closes(
     return rows
 
 
-def _fetch_index_closes(code: str, start: date, end: date) -> List[Tuple[date, float]]:
-    """pykrx 지수 일봉 종가 시계열. import 는 함수 안(테스트가 pykrx 없이 동작)."""
-    from pykrx import stock  # noqa: PLC0415 (cron 환경에서만 필요)
+def _fetch_index_closes(symbol: str, start: date, end: date) -> List[Tuple[date, float]]:
+    """FDR 지수 일봉 종가 시계열. import 는 함수 안(테스트가 FDR 없이 동작).
 
-    s = start.strftime("%Y%m%d")
-    e = end.strftime("%Y%m%d")
+    symbol 은 FDR 심볼('KS11'/'KQ11'). FDR 은 인덱스가 DatetimeIndex(Date),
+    종가는 'Close' 컬럼. 결측/0 종가는 제외한다.
+    """
+    import FinanceDataReader as fdr  # noqa: PLC0415 (cron 환경에서만 필요)
+
     try:
-        df = stock.get_index_ohlcv_by_date(s, e, code)
+        df = fdr.DataReader(symbol, start.isoformat(), end.isoformat())
     except Exception as ex:  # noqa: BLE001 (배치는 종목/지수 단위로 실패 격리)
-        print(f"  ! 지수 {code} pykrx 실패: {ex}")
+        print(f"  ! 지수 {symbol} FDR 실패: {ex}")
         return []
     if df is None or df.empty:
         return []
     out: List[Tuple[date, float]] = []
     for idx, row in df.iterrows():
         d = idx.date() if hasattr(idx, "date") else date.fromisoformat(str(idx)[:10])
-        close = float(row.get("종가", row.get("Close", 0)))
+        raw = row.get("Close", row.get("종가", 0))
+        try:
+            close = float(raw)
+        except (TypeError, ValueError):
+            continue
+        if close != close:  # NaN
+            continue
         if close > 0:
             out.append((d, close))
     return out
@@ -105,8 +113,8 @@ async def main(days: int) -> None:
     start = end - timedelta(days=days)
 
     total = 0
-    for code, (index_code, name) in INDEX_CODES.items():
-        closes = _fetch_index_closes(code, start, end)
+    for symbol, (index_code, name) in INDEX_CODES.items():
+        closes = _fetch_index_closes(symbol, start, end)
         rows = rows_from_closes(index_code, name, closes)
         n = await _upsert(cli, rows)
         total += n
