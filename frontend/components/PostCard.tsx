@@ -6,6 +6,7 @@ import { formatKRW, formatPct } from "@/lib/format";
 
 type Props = {
   post: PostCardData;
+  highlight?: boolean;
 };
 
 function relativeTime(iso: string): string {
@@ -26,10 +27,13 @@ function relativeTime(iso: string): string {
  * 종목 · 이번 달 수익(액/율) · (옵션)캡션 · (옵션)닉네임 · 반응바.
  * 댓글 UI 없음(스펙). 평행우주 출처면 작은 배지.
  */
-export function PostCard({ post }: Props) {
+export function PostCard({ post, highlight = false }: Props) {
   const positive = post.profit_amount >= 0;
   return (
-    <article className="post-card">
+    <article
+      id={`post-${post.id}`}
+      className={`post-card${highlight ? " highlight" : ""}`}
+    >
       <div className="post-head">
         <span className="post-name">{post.name}</span>
         {post.origin === "parallel" && (

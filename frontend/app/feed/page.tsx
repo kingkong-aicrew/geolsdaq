@@ -47,6 +47,28 @@ export default function FeedPage() {
   const [postError, setPostError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
+  // 등재 직후 이동(?highlight=id) — 해당 카드 강조 + 스크롤
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const scrolledRef = useRef(false);
+
+  // URLSearchParams 로 highlight id 읽기 (useSearchParams Suspense 경계 회피)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const id = new URLSearchParams(window.location.search).get("highlight");
+    if (id) setHighlightId(id);
+  }, []);
+
+  // 강조 카드가 목록에 들어오면 1회 스크롤
+  useEffect(() => {
+    if (!highlightId || scrolledRef.current) return;
+    if (!posts.some((p) => p.id === highlightId)) return;
+    const el = document.getElementById(`post-${highlightId}`);
+    if (el) {
+      scrolledRef.current = true;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [highlightId, posts]);
+
   // 피드 페이지는 스크롤 필요 — body overflow 해제(전역 hidden 무력화)
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -177,7 +199,7 @@ export default function FeedPage() {
 
       <header className="feed-header">
         <a href="/" className="feed-home" aria-label="처음으로">
-          ← 두 번째 월급
+          ← 껄스닥
         </a>
         <h1 className="feed-title">천하제일 주식자랑</h1>
         <div className="feed-tabs" role="tablist" aria-label="정렬">
@@ -290,7 +312,7 @@ export default function FeedPage() {
       {/* 피드 */}
       <section className="feed-list">
         {posts.map((p) => (
-          <PostCard key={p.id} post={p} />
+          <PostCard key={p.id} post={p} highlight={p.id === highlightId} />
         ))}
 
         {!loading && posts.length === 0 && !error && (

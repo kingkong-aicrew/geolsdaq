@@ -146,6 +146,34 @@ export function fetchShare(id: string): Promise<ShareResult> {
   return jsonFetch<ShareResult>(`/share/${encodeURIComponent(id)}`);
 }
 
+// ---------- %지표 (순위2 — 시장 분위·위로/연대 프레이밍) ----------
+
+export type PercentileResult = {
+  ticker: string;
+  name: string;
+  market: "KR" | "US";
+  buy_date: string; // YYYY-MM-DD
+  period_start: string;
+  period_end: string;
+  profit_pct: number; // 내 종목 보유 수익률(%)
+  total_count: number; // 같은 기간 분포 모수(전수)
+  worse_count: number; // 나보다 수익률이 낮은 종목 수(= 같이 버티는 개수)
+  better_count: number; // 나보다 수익률이 높은 종목 수
+  percentile: number; // worse_count / total_count * 100 (0~100, 높을수록 선방)
+  headline: string; // 서버 생성 위로·연대 카피(가드레일 통과)
+  disclaimer: string;
+};
+
+export function fetchPercentile(input: {
+  ticker: string;
+  buy_date: string;
+}): Promise<PercentileResult> {
+  const qs = new URLSearchParams();
+  qs.set("ticker", input.ticker);
+  qs.set("buy_date", input.buy_date);
+  return jsonFetch<PercentileResult>(`/percentile?${qs.toString()}`);
+}
+
 // ---------- 커뮤니티 (Phase B — posts / feed / react) ----------
 
 export type ReactionType = "fire" | "clap" | "cry";

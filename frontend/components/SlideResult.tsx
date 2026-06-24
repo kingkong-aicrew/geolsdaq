@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { CalculateResult } from "@/lib/api";
-import { submitStash } from "@/lib/api";
+import type { CalculateResult, PercentileResult } from "@/lib/api";
+import { createPost, fetchPercentile } from "@/lib/api";
 import { countUp, formatKRW } from "@/lib/format";
 
 // 생애단위 환산 기준 — 한국 공식 통계 (추측 아님, 출처 주석 필수)
@@ -43,6 +43,13 @@ function fmtPct(p: number): string {
   return `${p.toFixed(2)}%`;
 }
 
+// 시장 상위 % — 서버 percentile(나보다 못한 비율)의 보수(better 비율).
+// 0 방지: 1% 하한(전수에서 최상위라도 "상위 1%"로 표기).
+function topPctLabel(percentile: number): string {
+  const top = Math.max(1, Math.round(100 - percentile));
+  return `${top}%`;
+}
+
 // buy_date → "N년 전" / "N개월 전" 라벨 (그때 샀다면 시점 표시)
 function agoLabel(buyDate: string): string {
   const buy = new Date(buyDate);
@@ -73,13 +80,36 @@ export function SlideResult({
   const [toast, setToast] = useState<string | null>(null);
   const [showSalary, setShowSalary] = useState(false);
   const [salaryInput, setSalaryInput] = useState("");
+  // %지표(순위2) — 서버값만. 실패해도 결과는 표시(graceful degradation).
+  const [pctl, setPctl] = useState<PercentileResult | null>(null);
 
   // 부모 reset(처음부터) → 월급 토글/입력·등재 상태 초기화
   useEffect(() => {
     setShowSalary(false);
     setSalaryInput("");
     setStashDone(false);
+    setPctl(null);
   }, [resetKey]);
+
+  // 결과가 보일 때 시장 분위% 조회 — 실패는 조용히 무시(결과 노출 우선)
+  useEffect(() => {
+    if (!active || !data) {
+      setPctl(null);
+      return;
+    }
+    let alive = true;
+    setPctl(null);
+    fetchPercentile({ ticker: data.ticker, buy_date: data.buy_date })
+      .then((r) => {
+        if (alive) setPctl(r);
+      })
+      .catch(() => {
+        if (alive) setPctl(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [active, data]);
 
   useEffect(() => {
     if (!active || !data || !numRef.current) return;
@@ -106,27 +136,21 @@ export function SlideResult({
     if (!data || stashing || stashDone) return;
     setStashing(true);
     try {
-      const r = await submitStash({
+      const r = await createPost({
         ticker: data.ticker,
         qty: data.qty,
         buy_date: data.buy_date,
+        origin: "direct",
       });
       setStashDone(true);
-      setToast("등재 완료 · 익명으로 랭킹 반영");
-      // share URL 복사 옵션
+      setToast("등재 완료 · 피드로 이동해요");
+      // 등재된 카드로 바로 이동 + 하이라이트
       if (typeof window !== "undefined") {
-        const url = `${window.location.origin}/share/${r.id}`;
-        try {
-          await navigator.clipboard?.writeText(url);
-        } catch {
-          /* clipboard 실패는 무시 */
-        }
+        window.location.href = `/feed?highlight=${encodeURIComponent(r.id)}`;
       }
-      setTimeout(() => setToast(null), 2500);
     } catch (e) {
       setToast(e instanceof Error ? e.message : "등재 실패");
       setTimeout(() => setToast(null), 3000);
-    } finally {
       setStashing(false);
     }
   }
@@ -205,6 +229,15 @@ export function SlideResult({
             <div className="life-src">
               기준: 국민연금공단·통계청 공식 통계 · 서울 전셋값은 공개 시세
             </div>
+
+            {pctl && pctl.total_count > 0 && (
+              <div className="market-rank">
+                <div className="market-rank-head">
+                  시장 상위 {topPctLabel(pctl.percentile)} · 다 같이 버티는 중
+                </div>
+                <div className="market-rank-sub">{pctl.headline}</div>
+              </div>
+            )}
 
             {salaryKrw <= 0 && !showSalary && (
               <button

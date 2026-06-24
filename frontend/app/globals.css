@@ -1032,3 +1032,57 @@ body {
   font-size: 14px;
   color: #6b6b6b;
 }
+
+/* %지표(순위2) — 시장 분위 위로·연대 (매트릭스 네온 톤) */
+.market-rank {
+  margin-top: 12px;
+  align-self: stretch;
+  text-align: center;
+  padding: 12px 14px;
+  border: 1px solid #0a3d28;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #001b10 0%, #050505 100%);
+}
+
+.market-rank-head {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--kk-green);
+  letter-spacing: -0.01em;
+  text-shadow: 0 0 12px rgba(0, 255, 156, 0.35);
+}
+
+.market-rank-sub {
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #6b8f7d;
+}
+
+/* 등재 직후 이동한 카드 — 네온 강조(매트릭스 톤) */
+.post-card.highlight {
+  border-color: var(--kk-green);
+  box-shadow:
+    0 0 0 1px var(--kk-green),
+    0 0 22px rgba(0, 255, 156, 0.28);
+  animation: post-highlight 2.4s ease-out 1;
+}
+
+@keyframes post-highlight {
+  0% {
+    box-shadow:
+      0 0 0 1px var(--kk-green),
+      0 0 4px rgba(0, 255, 156, 0.2);
+  }
+  35% {
+    box-shadow:
+      0 0 0 1px var(--kk-green),
+      0 0 30px rgba(0, 255, 156, 0.55);
+  }
+  100% {
+    box-shadow:
+      0 0 0 1px var(--kk-green),
+      0 0 22px rgba(0, 255, 156, 0.28);
+  }
+}
