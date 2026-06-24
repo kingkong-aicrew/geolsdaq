@@ -5,10 +5,10 @@ import { useCallback, useMemo, useState } from "react";
 import { CodeRain } from "@/components/CodeRain";
 import { Disclaimer } from "@/components/Disclaimer";
 import { SlideDate } from "@/components/SlideDate";
+import { SlideIntro } from "@/components/SlideIntro";
 import { SlideParallel } from "@/components/SlideParallel";
 import { SlideQty } from "@/components/SlideQty";
 import { SlideResult } from "@/components/SlideResult";
-import { SlideSalary } from "@/components/SlideSalary";
 import { SlideStock } from "@/components/SlideStock";
 import { calculate, type CalculateResult } from "@/lib/api";
 import type { TickerItem } from "@/lib/tickers";
@@ -16,7 +16,7 @@ import type { TickerItem } from "@/lib/tickers";
 type Slide = "s1" | "s2" | "s3" | "s4" | "s5" | "s6";
 
 type State = {
-  salary: number | null;
+  salary: number | null; // 월급은 진입에서 제거 → 결과 화면 토글로 선택 입력
   stock: TickerItem | null;
   qty: number | null;
   yearsAgo: number | null;
@@ -64,8 +64,8 @@ export default function Page() {
     [],
   );
 
-  function handleSalary(v: number) {
-    setS((p) => ({ ...p, salary: v }));
+  function handleStart() {
+    // 후크 → 종목 선택으로
     setSlide("s2");
   }
 
@@ -85,6 +85,11 @@ export default function Page() {
     setSlide("s5");
     if (!s.stock || !s.qty) return;
     await runCalculate(s.stock.code, s.qty, buyDate);
+  }
+
+  // 월급은 진입이 아니라 결과 화면에서 '선택' 입력 (생애단위 비교의 보조 축)
+  function handleSalarySubmit(v: number) {
+    setS((p) => ({ ...p, salary: v }));
   }
 
   function handleRestart(e: React.MouseEvent) {
@@ -134,11 +139,7 @@ export default function Page() {
       <a href="#" className="brandmark" onClick={handleRestart}>껄스닥</a>
       <Disclaimer />
 
-      <SlideSalary
-        active={slide === "s1"}
-        resetKey={resetKey}
-        onSubmit={handleSalary}
-      />
+      <SlideIntro active={slide === "s1"} onStart={handleStart} />
       <SlideStock active={slide === "s2"} onSelect={handleStock} />
       <SlideQty
         active={slide === "s3"}
@@ -151,8 +152,10 @@ export default function Page() {
         active={slide === "s5"}
         data={result}
         salaryKrw={salaryKrw}
+        resetKey={resetKey}
         loading={loading}
         error={error}
+        onSalarySubmit={handleSalarySubmit}
         onParallel={handleParallel}
       />
       <SlideParallel

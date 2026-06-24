@@ -860,3 +860,175 @@ body {
     padding: 8px 12px;
   }
 }
+
+/* ===================================================================
+   진입 후크 (살걸 팔걸) — 매트릭스 블랙홀 톤, 피식→쓴웃음
+   =================================================================== */
+.intro-hook {
+  font-size: clamp(44px, 9vw, 116px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.04;
+  color: #fff;
+  font-family: var(--mono);
+}
+
+.intro-hook-em {
+  color: var(--kk-green);
+  text-shadow:
+    0 0 12px rgba(0, 255, 156, 0.45),
+    0 0 40px rgba(0, 255, 156, 0.2);
+}
+
+.intro-sub {
+  margin-top: 28px;
+  font-size: clamp(16px, 2.4vw, 24px);
+  color: #6b6b6b;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.intro-cta {
+  margin-top: 56px;
+  background: transparent;
+  border: 1px solid #2a2a2a;
+  color: #d4d4d4;
+  padding: 16px 32px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: clamp(16px, 2vw, 20px);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.intro-cta:hover {
+  border-color: var(--kk-green);
+  color: var(--kk-green);
+  box-shadow: 0 0 24px rgba(0, 255, 156, 0.15);
+}
+
+/* ===================================================================
+   생애단위 비교축 (국민연금·자녀 학원비·서울 전셋값) — 월급은 토글로 강등
+   =================================================================== */
+.life-compare {
+  margin-top: 44px;
+  width: min(480px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.life-head {
+  font-size: 14px;
+  color: #6b6b6b;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.life-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.life-list li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid #141414;
+  padding-bottom: 8px;
+}
+
+.life-lbl {
+  font-size: 15px;
+  color: #8a8a8a;
+  font-weight: 500;
+}
+
+.life-val {
+  font-family: var(--mono);
+  font-size: clamp(18px, 2.6vw, 24px);
+  font-weight: 700;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.life-list li.mine .life-val {
+  color: var(--kk-green);
+}
+
+.life-note {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #555;
+  font-weight: 400;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.life-src {
+  margin-top: 2px;
+  font-size: 10px;
+  color: #333;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.salary-toggle {
+  margin-top: 6px;
+  align-self: center;
+  background: transparent;
+  border: 1px dashed #2a2a2a;
+  color: #6b6b6b;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.salary-toggle:hover {
+  border-color: var(--kk-green);
+  color: var(--kk-green);
+}
+
+.salary-inline {
+  margin-top: 6px;
+  align-self: center;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.salary-inline input {
+  background: #000;
+  border: 1px solid #222;
+  border-bottom: 2px solid #2a2a2a;
+  border-radius: 8px;
+  color: #fff;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 18px;
+  text-align: right;
+  width: 120px;
+  padding: 8px 12px;
+  outline: none;
+}
+
+.salary-inline input:focus {
+  border-bottom-color: var(--kk-green);
+}
+
+.salary-inline .unit {
+  font-size: 14px;
+  color: #6b6b6b;
+}
