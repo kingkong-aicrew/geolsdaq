@@ -82,6 +82,8 @@ export function SlideResult({
   const [salaryInput, setSalaryInput] = useState("");
   // %지표(순위2) — 서버값만. 실패해도 결과는 표시(graceful degradation).
   const [pctl, setPctl] = useState<PercentileResult | null>(null);
+  // cold start(Render 무료 슬립 깨우기) 안내 — 로딩이 4초+ 지속되면 노출
+  const [slowHint, setSlowHint] = useState(false);
 
   // 부모 reset(처음부터) → 월급 토글/입력·등재 상태 초기화
   useEffect(() => {
@@ -90,6 +92,16 @@ export function SlideResult({
     setStashDone(false);
     setPctl(null);
   }, [resetKey]);
+
+  // 로딩이 4초 넘으면 cold start(서버 깨우는 중) 안내로 전환 — 멈춤 오인 방지
+  useEffect(() => {
+    if (!loading) {
+      setSlowHint(false);
+      return;
+    }
+    const t = setTimeout(() => setSlowHint(true), 4000);
+    return () => clearTimeout(t);
+  }, [loading]);
 
   // 결과가 보일 때 시장 분위% 조회 — 실패는 조용히 무시(결과 노출 우선)
   useEffect(() => {
@@ -174,7 +186,11 @@ export function SlideResult({
       {loading && (
         <>
           <div className="num">…</div>
-          <div className="loader">계산 중</div>
+          <div className="loader">
+            {slowHint
+              ? "서버 깨우는 중… 처음엔 최대 1분 걸려요"
+              : "그때 그 종목 찾는 중…"}
+          </div>
         </>
       )}
       {error && !loading && (
